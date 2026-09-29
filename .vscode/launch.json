@@ -1,0 +1,32 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug @ts exercicio 01 (config)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/index.ts",
+      "runtimeArgs": ["-r", "ts-node/register"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Debug @ts servidor (exercicios 02 a 05)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/server.ts",
+      "runtimeArgs": ["-r", "ts-node/register"],
+      "console": "integratedTerminal",
+      "env": {
+        "NODE_ENV": "development"
+      }
+    },
+    {
+      "name": "Debug @ts teste exercicio 05 (portas)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/teste-exercicio-05.ts",
+      "runtimeArgs": ["-r", "ts-node/register"],
+      "console": "integratedTerminal"
+    }
+  ]
+}

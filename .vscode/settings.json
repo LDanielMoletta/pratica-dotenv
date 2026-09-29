@@ -1,0 +1,8 @@
+{
+  "typescript.tsdk": "node_modules\\typescript\\lib",
+  "files.associations": {
+    "*.env.*": "dotenv"
+  },
+  "eslint.validate": ["typescript", "javascript"],
+  "editor.formatOnSave": false
+}
