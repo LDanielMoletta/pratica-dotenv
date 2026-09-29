@@ -3,4 +3,5 @@ dist
 temp
 logs
 *.log
+.env*
 .vscode/*.local
