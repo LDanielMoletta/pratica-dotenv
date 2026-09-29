@@ -35,7 +35,8 @@ function definirAmbiente(): Ambiente {
 
 const ambiente = definirAmbiente();
 const arquivo = ARQUIVOS[ambiente];
-dotenv.config({ path: path.resolve(__dirname, '..', arquivo) });
+// quiet: true silencia o banner promocional que o dotenv 17 imprime por padrão.
+dotenv.config({ path: path.resolve(__dirname, '..', arquivo), quiet: true });
 
 const schema = {
   type: 'object',
