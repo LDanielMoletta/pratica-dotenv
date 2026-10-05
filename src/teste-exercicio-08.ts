@@ -52,7 +52,16 @@ checar('2.2 alterar config.db.host (aninhado) falha', config.db.host === host &&
 console.log('== 3) Busca por process.env no código de aplicação ==');
 
 const RAIZ = path.resolve(__dirname, '..');
-const IGNORADOS = new Set(['config.ts', 'config-schema.ts', 'teste-exercicio-05.ts', 'teste-exercicio-08.ts']);
+// Exceções: o módulo de configuração, o comparativo env-schema e os HARNESSES de
+// teste — que montam uma *cópia* do ambiente para subir processos filhos com
+// NODE_ENV/LOG_PATH diferentes. Nenhum deles é código de aplicação.
+const IGNORADOS = new Set([
+  'config.ts',
+  'config-schema.ts',
+  'teste-exercicio-05.ts',
+  'teste-exercicio-08.ts',
+  'teste-exercicio-10.ts',
+]);
 
 function arquivosTypeScript(dir: string): string[] {
   const achados: string[] = [];

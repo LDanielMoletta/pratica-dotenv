@@ -2,14 +2,19 @@
 //
 // Ordem obrigatória dentro deste arquivo:
 //   1º  carregar o ambiente   (dotenv)  — antes de QUALQUER leitura
+//   1b interpolar variáveis  (dotenv-expand) — para valores derivados
 //   2º  validar e converter   (Joi)     — na borda do sistema
 //   3º  exportar objeto CONGELADO e tipado — para o resto do projeto
 //
 // Exercício 7: a chave de API vem daqui (validada na subida) e nunca é impressa.
 // Exercício 8: conversão única, tipos sem `undefined`, objeto congelado e
 //              agrupado por área (db / api / log), com o tipo exportado.
+// Exercício 10: LOG_PATH passa por dotenv-expand e é ancorado dentro da raiz.
 import path from 'node:path';
 import dotenv from 'dotenv';
+// dotenv-expand 1000 expõe SOMENTE { expand } — não existe export default,
+// então `import dotenvExpand from 'dotenv-expand'` (snippet antigo) quebra.
+import { expand } from 'dotenv-expand';
 import Joi from 'joi';
 
 // ---------------------------------------------------------------------------
@@ -39,9 +44,53 @@ function definirAmbiente(): Ambiente {
 
 const ambiente = definirAmbiente();
 const arquivo = ARQUIVOS[ambiente];
+const RAIZ = path.resolve(__dirname, '..');
+
 // quiet: true silencia o banner promocional que o dotenv 17 imprime por padrão.
 // O caminho é ancorado no próprio arquivo (funciona de qualquer diretório).
-dotenv.config({ path: path.resolve(__dirname, '..', arquivo), quiet: true });
+const { parsed } = dotenv.config({ path: path.join(RAIZ, arquivo), quiet: true });
+
+// ---------------------------------------------------------------------------
+// 1b passo: interpolar valores derivados (exercício 10)
+//
+// O dotenv-expand expande a partir do que está em `process.env`, então
+// garantimos NODE_ENV antes: sem isso, LOG_PATH=./logs/${NODE_ENV}.log
+// interpolaria para "./logs/.log" (silenciosamente).
+if (process.env.NODE_ENV === undefined || process.env.NODE_ENV === '') {
+  process.env.NODE_ENV = ambiente;
+}
+expand({ parsed });
+
+// O caminho interpolado é ancorado na raiz do projeto: caminho absoluto ou
+// com ".." que saia da raiz é REJEITADO na subida (impede path traversal).
+// Ausência de LOG_PATH cai num padrão SEGURO (dentro do projeto), não num erro.
+const logInformado = String(process.env.LOG_PATH ?? '').trim();
+const caminhoLogBruto = (logInformado === '' ? `./logs/\${NODE_ENV}.log` : logInformado)
+  .replace(/\$\{NODE_ENV\}/g, ambiente)
+  .trim();
+
+if (caminhoLogBruto.includes('${')) {
+  throw new Error(
+    `configuração inválida na subida:\n - "LOG_PATH" tem referência não resolvida: ${caminhoLogBruto}`,
+  );
+}
+
+const caminhoLog = path.isAbsolute(caminhoLogBruto)
+  ? caminhoLogBruto
+  : path.resolve(RAIZ, caminhoLogBruto);
+const relativo = path.relative(RAIZ, caminhoLog);
+
+if (relativo.startsWith('..') || path.isAbsolute(relativo)) {
+  throw new Error(
+    `configuração inválida na subida:\n - "LOG_PATH" precisa ficar dentro do projeto (raiz: ${RAIZ})`,
+  );
+}
+if (path.extname(caminhoLog).toLowerCase() !== '.log') {
+  throw new Error(
+    `configuração inválida na subida:\n - "LOG_PATH" precisa terminar em .log`,
+  );
+}
+const dirLog = path.dirname(caminhoLog);
 
 // ---------------------------------------------------------------------------
 // 2º passo: validar e converter na borda
@@ -50,7 +99,6 @@ type Valores = {
   DB_HOST: string;
   API_KEY: string;
   PORT: number;
-  LOG_PATH: string;
   LOG_LEVEL: string;
 };
 
@@ -62,9 +110,11 @@ const schema = Joi.object<Valores>({
   // PORT: texto vazio é tratado como não definido (vira o padrão 3000);
   // texto não numérico é erro; faixa válida 0..65535; resultado é number.
   PORT: Joi.number().empty('').integer().min(0).max(65535).default(3000),
-  // LOG_PATH/LOG_LEVEL (exercício 10): opcional com padrão seguro e validado.
-  LOG_PATH: Joi.string().empty('').default('./logs/${NODE_ENV}.log'),
-  LOG_LEVEL: Joi.string().empty('').valid('debug', 'info', 'warn', 'error').default('info'),
+  // LOG_LEVEL (exercício 10): nível do log por ambiente.
+  LOG_LEVEL: Joi.string()
+    .empty('')
+    .valid('debug', 'info', 'warn', 'error')
+    .default(ambiente === 'development' ? 'debug' : 'info'),
   // .unknown(true): variáveis extras do sistema (NODE_ENV, PATH, ...) não
   // podem derrubar a validação.
 }).unknown(true);
@@ -84,6 +134,8 @@ export const config = Object.freeze({
   env: ambiente,
   /** Arquivo de ambiente efetivamente lido (para diagnóstico). */
   arquivo,
+  /** Raia do projeto — usada para ancorar caminhos (exercício 10). */
+  root: RAIZ,
   /** Porta do servidor: number, já convertida e validada. */
   port: valor.PORT,
   db: Object.freeze({
@@ -95,10 +147,14 @@ export const config = Object.freeze({
     key: valor.API_KEY,
   }),
   log: Object.freeze({
-    /** Caminho do arquivo de log (texto; interpolado no exercício 10). */
-    path: valor.LOG_PATH,
-    /** Nível de log: 'debug' | 'info' | 'warn' | 'error'. */
+    /** Caminho ABSOLUTO do log, interpolado e ancorado dentro da raiz. */
+    path: caminhoLog,
+    /** Diretório do log (criado pelo logger se não existir). */
+    dir: dirLog,
+    /** Nível mínimo do log: 'debug' | 'info' | 'warn' | 'error'. */
     level: valor.LOG_LEVEL,
+    /** Formato por ambiente: 'text' em dev, 'json' em produção. */
+    format: ambiente === 'development' ? 'text' : 'json',
   }),
 });
 
@@ -114,6 +170,10 @@ console.log(
     arquivo: config.arquivo,
     banco: config.db.host,
     porta: config.port,
-    log: { path: config.log.path, level: config.log.level },
+    log: {
+      caminho: path.relative(RAIZ, config.log.path),
+      nivel: config.log.level,
+      formato: config.log.format,
+    },
   }),
 );

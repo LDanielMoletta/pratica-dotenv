@@ -10,6 +10,7 @@
 //    erro, evitando anunciar "servidor no ar" quando ele não subiu.
 import { createApp } from './app';
 import { config } from './config';
+import { caminhoLog, escreverLog } from './logger';
 
 if (process.argv.includes('--print-config')) {
   process.exit(0);
@@ -30,6 +31,8 @@ server.on('listening', () => {
       return;
     }
     console.log(`servidor no ar na porta ${portaReal} (http://localhost:${portaReal})`);
+    // exercício 10: a subida também fica registrada no arquivo de log
+    escreverLog('info', `servidor no ar na porta ${portaReal} (log: ${caminhoLog()})`);
   });
 });
 
@@ -37,8 +40,10 @@ server.on('error', (err: NodeJS.ErrnoException) => {
   falhou = true;
   if (err.code === 'EADDRINUSE') {
     console.error(`ERRO: porta ${config.port} já está em uso (EADDRINUSE). Não foi possível iniciar.`);
+    escreverLog('error', `falha ao iniciar: porta ${config.port} já em uso (EADDRINUSE)`);
   } else {
     console.error('ERRO ao iniciar o servidor:', err);
+    escreverLog('error', `falha ao iniciar: ${err.code ?? err.message}`);
   }
   process.exit(1);
 });

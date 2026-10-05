@@ -28,21 +28,25 @@ pratica-dotenv/
 │   ├── exercicio-05-porta-instancia.md
 │   ├── exercicio-07-chaves-api.md
 │   ├── exercicio-08-estrutura-projeto.md
-│   └── exercicio-09-equipe.md
+│   ├── exercicio-09-equipe.md
+│   └── exercicio-10-variaveis-dinamicas.md
 ├── scripts/
 │   └── check-env.ts               # Hook predev: contrato de ambiente do time (ex09)
 ├── src/
-│   ├── config.ts                 # Único módulo que lê process.env (dotenv + NODE_ENV + Joi + freeze)
+│   ├── config.ts                 # Único módulo que lê process.env (dotenv + expand + Joi + freeze)
 │   ├── config-schema.ts          # Mesma validação com env-schema (JSON Schema/Ajv)
-│   ├── app.ts                    # createApp() + rota /health
-│   ├── server.ts                 # listen, porta real (server.address), EADDRINUSE
+│   ├── app.ts                    # createApp(): /health e /weather (sem credencial na resposta)
+│   ├── server.ts                 # listen, porta real (server.address), EADDRINUSE, log
 │   ├── database.ts               # consome config.db.host
 │   ├── integration.ts            # consome config.api.key
 │   ├── weather.ts                # cliente da API externa: Authorization + máscara (ex07)
+│   ├── logger.ts                 # log em arquivo: nível e formato por ambiente (ex10)
 │   ├── index.ts                  # demonstração do exercício 1
 │   ├── teste-exercicio-05.ts     # harness do exercício 5 (12 verificações)
-│   └── teste-exercicio-08.ts     # harness do exercício 8 (6 verificações)
+│   ├── teste-exercicio-08.ts     # harness do exercício 8 (6 verificações)
+│   └── teste-exercicio-10.ts     # harness do exercício 10 (15 verificações)
 ├── temp/                          # Reproduções (ignorada pelo Git)
+├── logs/                          # Logs gerados (ignorado pelo Git)
 ├── .env.example                  # Contrato de ambiente do time (SÓ placeholders)
 ├── .env.dev / .env.prod          # Valores locais (IGNORADOS pelo Git)
 ├── eslint.config.js
@@ -127,6 +131,18 @@ onboarding (`cp .env.example .env.dev` → preencher → `npm run check:env`).
 **6 cenários** reproduzidos num sandbox Git (clone limpo, cópia preenchida,
 `git add -f`, chave faltando, segredo no exemplo, conflito de merge).
 
+### 10. Variáveis dinâmicas (dotenv-expand)
+`LOG_PATH=./logs/${NODE_ENV}.log` sem `expand` criava arquivo com o nome literal;
+com `expand` e **sem** `NODE_ENV` no ambiente, virava `./logs/.log` (vazio, **sem
+erro**); e `../../` dentro do valor interpolado **escrevia fora do projeto**.
+Além disso, `dotenv-expand` 1000 **não tem export default** (o snippet da lista
+quebraria).
+**Correções:** `import { expand } from 'dotenv-expand'` + `expand({ parsed })`
+depois de garantir `NODE_ENV`, caminho ancorado na raiz com rejeição de
+`path traversal`/extensão, e `src/logger.ts` com nível (`debug`/`info`) e formato
+(texto/JSON) por ambiente, criando o diretório quando falta.
+**Teste (`npm run test:ex10`): 15/15.**
+
 ---
 
 ## Como Executar
@@ -157,12 +173,18 @@ node -r ts-node/register src/config-schema.ts
 npm run test:ex5
 
 # Exercício 7 - cliente da API com credencial mascarada
-npm run start:dev                          # sobe o servidor em http://localhost:3000
-curl http://localhost:3000/weather?cidade=Sao-Paulo
-#   (o log mostra "credencial: ****0000"; a chave nunca aparece na URL)
+# (o mock fictício do exercício vive em temp/, ignorada pelo Git)
+node -r ts-node/register temp/exercicio-07/mock-api.ts   # terminal 1 (porta 4010)
+npm run start:dev                                        # terminal 2
+curl "http://localhost:3000/weather?cidade=Sao-Paulo"
+#   HTTP=200 {"clima":{...},"log":"logs\\development.log"}
+#   o log do servidor mostra "credencial: ****0000"; a chave nunca sai no corpo
 
 # Exercício 8 - harness (6 verificações)
 npm run test:ex8
+
+# Exercício 10 - harness (15 verificações)
+npm run test:ex10
 
 # Qualidade
 npm run typecheck                          # tsc de src/ e de scripts/
@@ -189,6 +211,7 @@ npm run lint
 | Cenários Ex 7 (A–E: default, URL, log, 401, sem chave) | ✅ |
 | `npm run test:ex8` | ✅ 6/6 |
 | Cenários Ex 9 (6 no sandbox Git + hook `predev`) | ✅ |
+| `npm run test:ex10` | ✅ 15/15 |
 
 ---
 
@@ -202,6 +225,7 @@ npm run lint
 - A aplicação **não sobe** com configuração inválida
 - Validação de tipo e faixa de `PORT` (converte para `number`)
 - Contrato de ambiente versionado (`.env.example`) e verificado por hook `predev`
+- Caminhos derivados de variáveis são **ancorados** na raiz do projeto
 - Registro de cada exercício (sintoma, hipótese, evidência, correção) em `docs exercícios/`
 - Reproduções isoladas em `temp/` (ignorada pelo Git)
 - Ações sensíveis documentadas (rotação da chave que esteve no histórico)
