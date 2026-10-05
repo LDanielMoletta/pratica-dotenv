@@ -26,6 +26,7 @@
   "license": "MIT",
   "dependencies": {
     "dotenv": "^17.0.0",
+    "dotenv-expand": "^1000.0.0",
     "env-schema": "^6.0.0",
     "express": "^5.2.1",
     "joi": "^17.13.0"
