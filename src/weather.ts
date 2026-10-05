@@ -29,21 +29,21 @@ export async function getWeather(city: string): Promise<Clima> {
 
   // log SEM a credencial: só o endpoint, a cidade e um identificador mascarado
   console.log(
-    `[weather] GET ${url.origin}${url.pathname} | cidade: ${city} | credencial: ${mask(config.apiKey)}`,
+    `[weather] GET ${url.origin}${url.pathname} | cidade: ${city} | credencial: ${mask(config.api.key)}`,
   );
 
   const response = await fetch(url, {
-    headers: { authorization: `Bearer ${config.apiKey}` },
+    headers: { authorization: `Bearer ${config.api.key}` },
   });
 
   if (!response.ok) {
     // diagnóstico útil (status + corpo) SEM a credencial
     const corpo = (await response.text()).slice(0, 200);
     console.error(
-      `[weather] falha na API | status=${response.status} | corpo=${corpo} | credencial=${mask(config.apiKey)}`,
+      `[weather] falha na API | status=${response.status} | corpo=${corpo} | credencial=${mask(config.api.key)}`,
     );
     throw new Error(
-      `falha na API: ${response.status} (credencial ${mask(config.apiKey)} rejeitada)`,
+      `falha na API: ${response.status} (credencial ${mask(config.api.key)} rejeitada)`,
     );
   }
 

@@ -3,6 +3,6 @@
 // configuração centralizado.
 import { config } from './config';
 
-export const dbHost = config.dbHost;
+export const dbHost = config.db.host;
 
 console.log('host do banco:', dbHost);

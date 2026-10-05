@@ -1,8 +1,8 @@
 // src/integration.ts
-// Consome o objeto VALIDADO da configuração — nunca process.env de novo
+// Consome o objeto VALIDADO da configuração — nunca relê o ambiente
 // (exercício 4: a leitura espalhada que contornava a validação).
 import { config } from './config';
 
-export const apiKey = config.apiKey;
+export const apiKey = config.api.key;
 
-console.log('integration usa config.apiKey (validado), não process.env:', typeof apiKey);
+console.log('integration usa config.api.key (validado), sem reler o ambiente:', typeof apiKey);

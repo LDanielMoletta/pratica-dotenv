@@ -13,6 +13,7 @@
     "print:config:dev": "cross-env NODE_ENV=development ts-node src/server.ts --print-config",
     "print:config:prod": "cross-env NODE_ENV=production ts-node src/server.ts --print-config",
     "test:ex5": "node -r ts-node/register src/teste-exercicio-05.ts",
+    "test:ex8": "node -r ts-node/register src/teste-exercicio-08.ts",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix"
   },
